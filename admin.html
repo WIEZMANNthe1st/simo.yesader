@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ניהול — סידור עבודה</title>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ===== מסך התחברות ===== -->
+<div id="login-view" class="login-wrap" style="display:none">
+  <div class="page-switch">
+    <a href="/">👤 עובדים</a>
+    <a href="/admin" class="active">🛠️ ניהול</a>
+  </div>
+  <div class="card">
+    <div class="logo-circ">🔑</div>
+    <h1>כניסת מנהל</h1>
+    <p class="sub">ניהול עובדים, אילוצים וסידור עבודה</p>
+    <div class="field">
+      <label>סיסמת מנהל</label>
+      <input id="login-pass" type="password" autocomplete="off">
+    </div>
+    <div id="login-msg" class="msg"></div>
+    <button id="login-btn" style="width:100%">כניסה</button>
+  </div>
+</div>
+
+<!-- ===== מסך ראשי ===== -->
+<div id="app-view" style="display:none">
+  <header class="app-header">
+    <h1>🛠️ ניהול סידור עבודה</h1>
+    <div class="who">
+      <a href="/" class="header-link">לדף העובדים</a>
+      <button class="small secondary" id="logout-btn">יציאה</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="week-nav">
+      <button class="secondary" id="prev-week">→ שבוע קודם</button>
+      <span class="label" id="week-label"></span>
+      <button class="secondary" id="next-week">שבוע הבא ←</button>
+    </div>
+
+    <div class="tabs">
+      <button data-tab="tab-schedule" class="active">סידור עבודה</button>
+      <button data-tab="tab-constraints">אילוצים</button>
+      <button data-tab="tab-employees">עובדים</button>
+      <button data-tab="tab-settings">הגדרות</button>
+    </div>
+
+    <!-- ===== טאב סידור ===== -->
+    <div class="tab-page active card" id="tab-schedule">
+      <div class="row spread">
+        <h2>סידור עבודה <span id="pub-badge"></span></h2>
+        <div class="row">
+          <button id="gen-btn">⚡ צור סידור אוטומטי</button>
+          <button class="secondary" id="save-sched-btn">💾 שמור</button>
+          <button id="publish-btn" class="secondary"></button>
+        </div>
+      </div>
+      <div id="sched-msg" class="msg"></div>
+      <div id="rule-warn" class="msg"></div>
+      <p class="legend">בכל משמרת שני עובדים. תא אדום = העובד סימן אילוץ למשמרת הזו. כללים מחייבים: עד 4 משמרות בשבוע לעובד, בלי שתי משמרות רצופות (כולל לילה ואז יום למחרת), וכיבוד אילוצים. השיבוץ האוטומטי שומר על כולם ומאזן עומס; סידור ידני שמפר אותם לא יישמר.</p>
+      <div style="overflow-x:auto; margin-top:12px">
+        <table class="shifts" id="sched-table"></table>
+      </div>
+    </div>
+
+    <!-- ===== טאב אילוצים ===== -->
+    <div class="tab-page card" id="tab-constraints">
+      <h2>אילוצים שהוזנו לשבוע זה</h2>
+      <div id="con-status"></div>
+      <div style="overflow-x:auto; margin-top:12px">
+        <table class="shifts" id="con-table"></table>
+      </div>
+      <div id="con-notes"></div>
+    </div>
+
+    <!-- ===== טאב עובדים ===== -->
+    <div class="tab-page card" id="tab-employees">
+      <h2>עובדים</h2>
+      <div class="row" style="align-items:flex-end; margin-bottom:16px">
+        <div style="flex:2; min-width:140px">
+          <label>שם העובד</label>
+          <input id="new-name" placeholder="למשל: דנה לוי">
+        </div>
+        <div style="flex:1; min-width:100px">
+          <label>קוד אישי</label>
+          <input id="new-code" placeholder="ריק = קוד אקראי">
+        </div>
+        <button id="add-emp-btn">➕ הוספה</button>
+      </div>
+      <div id="emp-msg" class="msg"></div>
+      <table class="emps" id="emp-table"></table>
+      <p class="legend">את הקוד האישי מוסרים לעובד — איתו הוא נכנס לאתר ומזין אילוצים.</p>
+    </div>
+
+    <!-- ===== טאב הגדרות ===== -->
+    <div class="tab-page card" id="tab-settings">
+      <h2>הגדרות</h2>
+
+      <h3>⏰ תאריכי יעד להגשת זמינות</h3>
+      <p class="legend">עד מתי עובדים יכולים להגיש ולעדכן זמינות לכל חודש (יום היעד עצמו עדיין פתוח). ריק = ללא הגבלה. אחרי התאריך ההגשה ננעלת, ואפשר תמיד להאריך אותה כאן.</p>
+      <div id="deadline-msg" class="msg"></div>
+      <div id="deadlines" style="margin-bottom:24px"></div>
+
+      <h3>🔑 סיסמת מנהל</h3>
+      <div class="field" style="max-width:300px">
+        <label>סיסמת מנהל חדשה</label>
+        <input id="new-pass" type="password" autocomplete="new-password">
+      </div>
+      <div id="set-msg" class="msg"></div>
+      <button id="change-pass-btn">שינוי סיסמה</button>
+    </div>
+  </main>
+</div>
+
+<script src="common.js"></script>
+<script>
+const TOKEN_KEY = 'admin_token';
+let weekOffset = 0;
+let state = { employees: [], constraints: {}, schedule: {}, published: false };
+
+const $ = id => document.getElementById(id);
+const activeEmps = () => state.employees.filter(e => e.active !== false);
+const isBlocked = (empId, key) => {
+  const c = state.constraints[empId];
+  return !!(c && (c.blocked || []).includes(key));
+};
+
+/* ---------- התחברות ---------- */
+$('login-btn').onclick = async () => {
+  try {
+    const data = await api('/api/admin/login', { method: 'POST', body: { password: $('login-pass').value } });
+    sessionStorage.setItem(TOKEN_KEY, data.token);
+    location.reload();
+  } catch (e) {
+    showMsg($('login-msg'), e.message, 'err');
+  }
+};
+$('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') $('login-btn').click(); });
+$('logout-btn').onclick = () => { sessionStorage.removeItem(TOKEN_KEY); location.reload(); };
+
+/* ---------- טאבים ---------- */
+document.querySelectorAll('.tabs button').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    $(btn.dataset.tab).classList.add('active');
+  };
+});
+
+/* ---------- טעינת שבוע ---------- */
+function curWeekKey() { return toKey(weekStart(weekOffset)); }
+
+async function loadWeek() {
+  const start = weekStart(weekOffset);
+  $('week-label').textContent = 'שבוע ' + weekLabel(start);
+  state = await api('/api/admin/week?week=' + curWeekKey());
+  renderAll(start);
+}
+
+function renderAll(start) {
+  renderSchedule(start);
+  renderConstraints(start);
+  renderEmployees();
+  renderPublish();
+}
+
+/* ---------- עורך הסידור ---------- */
+function renderSchedule(start) {
+  let html = `<tr><th>יום</th><th>${SHIFT_LABELS.day}</th><th>${SHIFT_LABELS.night}</th></tr>`;
+  for (let d = 0; d < 7; d++) {
+    html += `<tr><td class="day-name">${DAY_NAMES[d]}<span class="date">${dayDate(start, d)}</span></td>`;
+    for (const t of SHIFT_TYPES) {
+      const key = `${d}-${t}`;
+      const ids = state.schedule[key] || [null, null];
+      html += '<td class="editor">';
+      for (let slot = 0; slot < 2; slot++) {
+        const cur = ids[slot] || '';
+        const conflict = cur && isBlocked(cur, key);
+        html += `<select data-key="${key}" data-slot="${slot}"
+                   class="${conflict ? 'conflict' : ''} ${cur ? '' : 'empty-slot'}">
+                   <option value="">— ריק —</option>` +
+          activeEmps().map(e =>
+            `<option value="${e.id}" ${e.id === cur ? 'selected' : ''}>
+               ${e.name}${isBlocked(e.id, key) ? ' ⚠️ (אילוץ)' : ''}</option>`).join('') +
+          '</select>';
+      }
+      html += '</td>';
+    }
+    html += '</tr>';
+  }
+  $('sched-table').innerHTML = html;
+  document.querySelectorAll('#sched-table select').forEach(sel => {
+    sel.onchange = () => {
+      const { key, slot } = sel.dataset;
+      if (!state.schedule[key]) state.schedule[key] = [null, null];
+      state.schedule[key][+slot] = sel.value || null;
+      renderSchedule(weekStart(weekOffset));
+    };
+  });
+  renderRuleWarnings();
+}
+
+/* בדיקת כללים חיה בזמן עריכה ידנית (אותם כללים נאכפים גם בשרת) */
+function clientViolations(sched) {
+  const nameOf = id => (state.employees.find(e => e.id === id) || { name: '?' }).name;
+  const msgs = [];
+  const counts = {};
+  for (let d = 0; d < 7; d++) {
+    for (const t of SHIFT_TYPES) {
+      const ids = sched[`${d}-${t}`] || [];
+      if (ids[0] && ids[0] === ids[1]) msgs.push(`${nameOf(ids[0])} משובץ/ת פעמיים באותה משמרת (${DAY_NAMES[d]})`);
+      ids.forEach(id => { if (id) counts[id] = (counts[id] || 0) + 1; });
+    }
+  }
+  for (const [id, c] of Object.entries(counts)) {
+    if (c > MAX_SHIFTS_PER_WEEK) msgs.push(`${nameOf(id)}: ${c} משמרות — המקסימום הוא ${MAX_SHIFTS_PER_WEEK} בשבוע`);
+  }
+  for (let d = 0; d < 7; d++) {
+    const day = sched[`${d}-day`] || [], night = sched[`${d}-night`] || [];
+    for (const id of day) {
+      if (id && night.includes(id)) msgs.push(`${nameOf(id)}: שתי משמרות רצופות ביום ${DAY_NAMES[d]}`);
+    }
+    if (d < 6) {
+      for (const id of night) {
+        if (id && (sched[`${d + 1}-day`] || []).includes(id)) {
+          msgs.push(`${nameOf(id)}: לילה ${DAY_NAMES[d]} ומיד יום ${DAY_NAMES[d + 1]} — משמרות רצופות`);
+        }
+      }
+    }
+  }
+  return msgs;
+}
+
+function renderRuleWarnings() {
+  const el = $('rule-warn');
+  const msgs = clientViolations(state.schedule);
+  if (msgs.length) {
+    el.className = 'msg warn';
+    el.innerHTML = '⚠️ ' + msgs.join('<br>⚠️ ') + '<br><b>לא ניתן לשמור עד לתיקון.</b>';
+  } else {
+    el.className = 'msg';
+    el.innerHTML = '';
+  }
+}
+
+$('gen-btn').onclick = async () => {
+  if (!activeEmps().length) {
+    return showMsg($('sched-msg'), 'אין עובדים פעילים — הוסיפו עובדים בטאב "עובדים"', 'err');
+  }
+  try {
+    const data = await api('/api/admin/generate', { method: 'POST', body: { week: curWeekKey() } });
+    state.schedule = data.schedule;
+    renderSchedule(weekStart(weekOffset));
+    if (data.unfilled.length) {
+      showMsg($('sched-msg'), `הסידור נוצר, אבל ${data.unfilled.length} משבצות נותרו ריקות (אין מספיק עובדים פנויים) — השלימו ידנית`, 'warn');
+    } else {
+      showMsg($('sched-msg'), 'הסידור נוצר בהצלחה — אפשר לערוך ידנית ואז לשמור ולפרסם ✓', 'ok');
+    }
+  } catch (e) {
+    showMsg($('sched-msg'), e.message, 'err');
+  }
+};
+
+$('save-sched-btn').onclick = async () => {
+  try {
+    await api('/api/admin/schedule', { method: 'POST', body: { week: curWeekKey(), schedule: state.schedule } });
+    showMsg($('sched-msg'), 'הסידור נשמר ✓', 'ok');
+  } catch (e) {
+    showMsg($('sched-msg'), e.message, 'err');
+  }
+};
+
+function renderPublish() {
+  $('publish-btn').textContent = state.published ? '🙈 בטל פרסום' : '📣 פרסם לעובדים';
+  $('pub-badge').innerHTML = state.published
+    ? '<span class="badge ok">מפורסם</span>'
+    : '<span class="badge muted">טיוטה</span>';
+}
+
+$('publish-btn').onclick = async () => {
+  try {
+    await api('/api/admin/schedule', { method: 'POST', body: { week: curWeekKey(), schedule: state.schedule } });
+    await api('/api/admin/publish', { method: 'POST', body: { week: curWeekKey(), published: !state.published } });
+    state.published = !state.published;
+    renderPublish();
+    showMsg($('sched-msg'), state.published ? 'הסידור פורסם — העובדים רואים אותו עכשיו ✓' : 'הפרסום בוטל', 'ok');
+  } catch (e) {
+    showMsg($('sched-msg'), e.message, 'err');
+  }
+};
+
+/* ---------- טאב אילוצים ---------- */
+function renderConstraints(start) {
+  const emps = activeEmps();
+  const submitted = emps.filter(e => state.constraints[e.id]);
+  $('con-status').innerHTML = emps.map(e =>
+    `<span class="badge ${state.constraints[e.id] ? 'ok' : 'warn'}" style="margin:2px">
+       ${e.name} ${state.constraints[e.id] ? '✓' : '— טרם הזין/ה'}</span>`).join(' ') +
+    `<p class="legend">${submitted.length} מתוך ${emps.length} עובדים הזינו אילוצים לשבוע זה.</p>`;
+
+  let html = '<tr><th>משמרת</th>' + emps.map(e => `<th>${e.name}</th>`).join('') + '</tr>';
+  for (let d = 0; d < 7; d++) {
+    for (const t of SHIFT_TYPES) {
+      const key = `${d}-${t}`;
+      html += `<tr><td class="day-name">${DAY_NAMES[d]} ${dayDate(start, d)} · ${t === 'day' ? 'יום' : 'לילה'}</td>`;
+      html += emps.map(e =>
+        isBlocked(e.id, key) ? '<td class="b">✗</td>' : '<td class="ok-mark">✓</td>').join('');
+      html += '</tr>';
+    }
+  }
+  $('con-table').innerHTML = html;
+
+  const notes = emps
+    .filter(e => state.constraints[e.id] && state.constraints[e.id].note)
+    .map(e => `<p class="note-line">💬 <b>${e.name}:</b> ${state.constraints[e.id].note}</p>`);
+  $('con-notes').innerHTML = notes.length ? '<h3>הערות מהעובדים</h3>' + notes.join('') : '';
+}
+
+/* ---------- טאב עובדים ---------- */
+function renderEmployees() {
+  if (!state.employees.length) {
+    $('emp-table').innerHTML = '<tr><td>עדיין אין עובדים — הוסיפו את העובד הראשון למעלה.</td></tr>';
+    return;
+  }
+  $('emp-table').innerHTML =
+    '<tr><th>שם</th><th>קוד אישי</th><th>סטטוס</th><th></th></tr>' +
+    state.employees.map(e => `
+      <tr>
+        <td>${e.name}</td>
+        <td><span class="code">${e.code}</span></td>
+        <td>${e.active !== false ? '<span class="badge ok">פעיל</span>' : '<span class="badge muted">מושבת</span>'}</td>
+        <td style="text-align:left">
+          <button class="small secondary" data-act="toggle" data-id="${e.id}">${e.active !== false ? 'השבתה' : 'הפעלה'}</button>
+          <button class="small danger" data-act="del" data-id="${e.id}">מחיקה</button>
+        </td>
+      </tr>`).join('');
+
+  document.querySelectorAll('#emp-table button').forEach(btn => {
+    btn.onclick = async () => {
+      const emp = state.employees.find(e => e.id === btn.dataset.id);
+      try {
+        if (btn.dataset.act === 'del') {
+          if (!confirm(`למחוק את ${emp.name} לצמיתות?`)) return;
+          await api('/api/admin/employee/' + emp.id, { method: 'DELETE' });
+        } else {
+          await api('/api/admin/employee/' + emp.id, { method: 'PUT', body: { active: emp.active === false } });
+        }
+        await loadWeek();
+      } catch (e) {
+        showMsg($('emp-msg'), e.message, 'err');
+      }
+    };
+  });
+}
+
+$('add-emp-btn').onclick = async () => {
+  try {
+    await api('/api/admin/employee', { method: 'POST', body: {
+      name: $('new-name').value, code: $('new-code').value
+    }});
+    $('new-name').value = ''; $('new-code').value = '';
+    showMsg($('emp-msg'), 'העובד נוסף ✓', 'ok');
+    await loadWeek();
+  } catch (e) {
+    showMsg($('emp-msg'), e.message, 'err');
+  }
+};
+
+/* ---------- תאריכי יעד ---------- */
+async function loadDeadlines() {
+  const deadlines = await api('/api/admin/deadlines');
+  const now = new Date();
+  let html = '';
+  // החודש הנוכחי + 3 הבאים
+  for (let i = 0; i < 4; i++) {
+    const m = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    const mk = `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}`;
+    html += `
+      <div class="row" style="margin-bottom:8px">
+        <span style="min-width:120px; font-weight:700">${HEB_MONTHS[m.getMonth()]} ${m.getFullYear()}</span>
+        <input type="date" data-month="${mk}" value="${deadlines[mk] || ''}" style="width:170px">
+        <button class="small secondary" data-save-deadline="${mk}">שמירה</button>
+        <button class="small secondary" data-clear-deadline="${mk}">ניקוי</button>
+      </div>`;
+  }
+  $('deadlines').innerHTML = html;
+
+  document.querySelectorAll('[data-save-deadline]').forEach(btn => {
+    btn.onclick = async () => {
+      const mk = btn.dataset.saveDeadline;
+      const val = document.querySelector(`input[data-month="${mk}"]`).value;
+      try {
+        await api('/api/admin/deadline', { method: 'POST', body: { month: mk, deadline: val } });
+        showMsg($('deadline-msg'), val ? 'תאריך היעד נשמר ✓' : 'תאריך היעד הוסר ✓', 'ok');
+      } catch (e) {
+        showMsg($('deadline-msg'), e.message, 'err');
+      }
+    };
+  });
+  document.querySelectorAll('[data-clear-deadline]').forEach(btn => {
+    btn.onclick = async () => {
+      const mk = btn.dataset.clearDeadline;
+      try {
+        await api('/api/admin/deadline', { method: 'POST', body: { month: mk, deadline: '' } });
+        document.querySelector(`input[data-month="${mk}"]`).value = '';
+        showMsg($('deadline-msg'), 'תאריך היעד הוסר ✓', 'ok');
+      } catch (e) {
+        showMsg($('deadline-msg'), e.message, 'err');
+      }
+    };
+  });
+}
+
+/* ---------- הגדרות ---------- */
+$('change-pass-btn').onclick = async () => {
+  try {
+    await api('/api/admin/password', { method: 'POST', body: { password: $('new-pass').value } });
+    $('new-pass').value = '';
+    showMsg($('set-msg'), 'הסיסמה שונתה ✓', 'ok');
+  } catch (e) {
+    showMsg($('set-msg'), e.message, 'err');
+  }
+};
+
+/* ---------- ניווט ואתחול ---------- */
+$('prev-week').onclick = () => { weekOffset--; loadWeek(); };
+$('next-week').onclick = () => { weekOffset++; loadWeek(); };
+
+if (sessionStorage.getItem(TOKEN_KEY)) {
+  $('app-view').style.display = 'block';
+  loadWeek().catch(() => {});
+  loadDeadlines().catch(() => {});
+} else {
+  $('login-view').style.display = 'block';
+}
+</script>
+</body>
+</html>

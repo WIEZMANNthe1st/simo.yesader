@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>הזנת זמינות — סידור עבודה</title>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ===== מסך התחברות ===== -->
+<div id="login-view" class="login-wrap" style="display:none">
+  <div class="page-switch">
+    <a href="/" class="active">👤 עובדים</a>
+    <a href="/admin">🛠️ ניהול</a>
+  </div>
+  <div class="card">
+    <div class="logo-circ">📅</div>
+    <h1>סידור עבודה</h1>
+    <p class="sub">בחרו את השם שלכם והזינו את הקוד האישי</p>
+    <div class="field">
+      <label>שם</label>
+      <select id="login-name"><option value="">טוען...</option></select>
+    </div>
+    <div class="field">
+      <label>קוד אישי</label>
+      <input id="login-code" type="password" inputmode="numeric" autocomplete="off" placeholder="הקוד שקיבלתם מהמנהל">
+    </div>
+    <div id="login-msg" class="msg"></div>
+    <button id="login-btn" style="width:100%">כניסה</button>
+  </div>
+</div>
+
+<!-- ===== מסך ראשי ===== -->
+<div id="app-view" style="display:none">
+  <header class="app-header">
+    <h1>📅 סידור עבודה</h1>
+    <div class="who">
+      <span id="who-name"></span>
+      <a href="/admin" class="header-link">לדף הניהול</a>
+      <button class="small secondary" id="logout-btn">יציאה</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="week-nav">
+      <button class="secondary" id="prev-month">→ חודש קודם</button>
+      <span class="label" id="month-label"></span>
+      <button class="secondary" id="next-month">חודש הבא ←</button>
+    </div>
+
+    <!-- סידורים מפורסמים -->
+    <div class="card" id="schedule-card" style="display:none">
+      <h2>✅ סידורי עבודה שפורסמו לחודש זה</h2>
+      <div id="schedule-tables"></div>
+    </div>
+
+    <!-- הזנת זמינות חודשית -->
+    <div class="card">
+      <h2>הזנת זמינות לחודש</h2>
+      <p class="legend">לחצו על משמרת כדי לסמן שאתם <b>לא יכולים</b> לעבוד בה. ירוק = פנוי/ה, אדום = לא יכול/ה. אפשר לחסום עד <b>8 ימים בחודש</b>.</p>
+      <div id="deadline-info"></div>
+      <div id="month-usage" style="margin-top:10px"></div>
+      <div id="save-msg-top" class="msg"></div>
+      <div style="overflow-x:auto; margin-top:8px">
+        <table class="shifts" id="con-table"></table>
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label>הערה למנהל (לא חובה)</label>
+        <textarea id="note" rows="2" placeholder="למשל: מעדיף משמרות לילה, חוזר ממילואים ב-15 לחודש..."></textarea>
+      </div>
+      <div id="save-msg" class="msg"></div>
+      <button id="save-btn">💾 שמירת זמינות לחודש</button>
+    </div>
+  </main>
+</div>
+
+<script src="common.js"></script>
+<script>
+const TOKEN_KEY = 'emp_token';
+let monthOffset = 0;      // 0 = החודש הבא
+let blocked = new Set();  // מפתחות 'YYYY-MM-DD-day/night'
+let names = {};
+let myId = null;
+let maxBlockedDays = 8;
+let locked = false;       // עבר תאריך היעד להגשה
+let deadline = null;
+
+const $ = id => document.getElementById(id);
+
+/* החודש המוצג: ברירת מחדל החודש הבא */
+function monthDate() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() + 1 + monthOffset, 1);
+}
+function monthKey() {
+  const m = monthDate();
+  return `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}`;
+}
+const pad = n => String(n).padStart(2, '0');
+
+function blockedDaysCount() {
+  return new Set([...blocked].map(k => k.slice(0, 10))).size;
+}
+
+/* ---------- התחברות ---------- */
+async function initLogin() {
+  $('login-view').style.display = 'block';
+  try {
+    const list = await api('/api/names');
+    const sel = $('login-name');
+    sel.innerHTML = '<option value="">— בחרו שם —</option>' +
+      list.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+    if (!list.length) {
+      showMsg($('login-msg'), 'עדיין לא הוגדרו עובדים במערכת. פנו למנהל.', 'warn');
+    }
+  } catch (e) {
+    showMsg($('login-msg'), 'שגיאה בטעינת רשימת העובדים', 'err');
+  }
+}
+
+$('login-btn').onclick = async () => {
+  try {
+    const data = await api('/api/login', { method: 'POST', body: {
+      empId: $('login-name').value, code: $('login-code').value
+    }});
+    sessionStorage.setItem(TOKEN_KEY, data.token);
+    sessionStorage.setItem('emp_name', data.name);
+    location.reload();
+  } catch (e) {
+    showMsg($('login-msg'), e.message, 'err');
+  }
+};
+$('login-code').addEventListener('keydown', e => { if (e.key === 'Enter') $('login-btn').click(); });
+
+$('logout-btn').onclick = () => { sessionStorage.clear(); location.reload(); };
+
+/* ---------- טעינת חודש ---------- */
+async function loadMonth() {
+  const m = monthDate();
+  $('month-label').textContent = `${HEB_MONTHS[m.getMonth()]} ${m.getFullYear()}`;
+  const data = await api('/api/month?month=' + monthKey());
+  blocked = new Set(data.blocked);
+  names = data.names;
+  myId = data.myId;
+  maxBlockedDays = data.maxBlockedDays || 8;
+  locked = !!data.locked;
+  deadline = data.deadline;
+  $('note').value = data.note;
+  renderDeadline();
+  renderConstraints();
+  renderSchedules(data.publishedWeeks || []);
+}
+
+/* ---------- תאריך יעד ---------- */
+function renderDeadline() {
+  const el = $('deadline-info');
+  $('save-btn').disabled = locked;
+  $('note').disabled = locked;
+  if (!deadline) { el.innerHTML = ''; return; }
+  const [y, mo, d] = deadline.split('-').map(Number);
+  const dt = new Date(y, mo - 1, d);
+  const txt = `יום ${DAY_NAMES[dt.getDay()]}, ${d}.${mo}.${y}`;
+  el.innerHTML = locked
+    ? `<div class="msg err">🔒 ההגשה לחודש זה נסגרה — תאריך היעד היה ${txt}. לשינויים פנו למנהל.</div>`
+    : `<div class="msg warn">⏰ ניתן להגיש ולעדכן זמינות לחודש זה עד ${txt} (כולל).</div>`;
+}
+
+/* ---------- טבלת זמינות חודשית ---------- */
+function renderConstraints() {
+  const m = monthDate();
+  const daysInMonth = new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate();
+  const mk = monthKey();
+
+  $('con-table').classList.toggle('locked', locked);
+  let html = `<tr><th>יום</th><th>${SHIFT_LABELS.day}</th><th>${SHIFT_LABELS.night}</th></tr>`;
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dt = new Date(m.getFullYear(), m.getMonth(), day);
+    const dk = `${mk}-${pad(day)}`;
+    const we = dt.getDay() >= 5 ? ' weekend' : '';
+    html += `<tr class="${we}"><td class="day-name${we}">${DAY_NAMES[dt.getDay()]}<span class="date">${day}.${m.getMonth() + 1}</span></td>`;
+    for (const t of SHIFT_TYPES) {
+      const key = `${dk}-${t}`;
+      const b = blocked.has(key);
+      html += `<td class="con-cell ${b ? 'blocked' : ''}" data-key="${key}" data-date="${dk}">
+                 <div class="inner">${b ? '✗ לא יכול/ה' : '✓ פנוי/ה'}</div></td>`;
+    }
+    html += '</tr>';
+  }
+  $('con-table').innerHTML = html;
+
+  document.querySelectorAll('.con-cell').forEach(td => {
+    td.onclick = () => {
+      if (locked) return;
+      const key = td.dataset.key;
+      if (blocked.has(key)) {
+        blocked.delete(key);
+      } else {
+        // חסימת יום חדש מעבר למכסה — נחסמת מראש
+        const isNewDay = ![...blocked].some(k => k.startsWith(td.dataset.date));
+        if (isNewDay && blockedDaysCount() >= maxBlockedDays) {
+          showMsg($('save-msg-top'), `הגעתם למכסה של ${maxBlockedDays} ימים חסומים בחודש — כדי לחסום יום נוסף, שחררו יום אחר.`, 'err');
+          return;
+        }
+        blocked.add(key);
+      }
+      renderConstraints();
+    };
+  });
+  renderMonthUsage();
+}
+
+function renderMonthUsage() {
+  const count = blockedDaysCount();
+  const cls = count >= maxBlockedDays ? 'warn' : 'muted';
+  $('month-usage').innerHTML =
+    `<span class="badge ${cls}">${count} / ${maxBlockedDays} ימים חסומים החודש</span>`;
+}
+
+/* ---------- סידורים מפורסמים ---------- */
+function renderSchedules(publishedWeeks) {
+  const card = $('schedule-card');
+  if (!publishedWeeks.length) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  $('schedule-tables').innerHTML = publishedWeeks.map(({ week, schedule }) => {
+    const [y, mo, dd] = week.split('-').map(Number);
+    const start = new Date(y, mo - 1, dd);
+    let html = `<h3>שבוע ${weekLabel(start)}</h3>
+      <table class="shifts" style="margin-bottom:14px">
+      <tr><th>יום</th><th>${SHIFT_LABELS.day}</th><th>${SHIFT_LABELS.night}</th></tr>`;
+    for (let d = 0; d < 7; d++) {
+      html += `<tr><td class="day-name">${DAY_NAMES[d]}<span class="date">${dayDate(start, d)}</span></td>`;
+      for (const t of SHIFT_TYPES) {
+        const ids = schedule[`${d}-${t}`] || [];
+        const cells = ids.map(id => {
+          if (!id) return '<span class="empty">—</span>';
+          const nm = names[id] || '?';
+          return id === myId ? `<span class="me">${nm}</span>` : nm;
+        }).join('<br>');
+        html += `<td class="assign">${cells || '<span class="empty">—</span>'}</td>`;
+      }
+      html += '</tr>';
+    }
+    return html + '</table>';
+  }).join('');
+}
+
+/* ---------- שמירה ---------- */
+$('save-btn').onclick = async () => {
+  try {
+    await api('/api/month', { method: 'POST', body: {
+      month: monthKey(),
+      blocked: [...blocked],
+      note: $('note').value
+    }});
+    showMsg($('save-msg'), 'הזמינות לחודש נשמרה בהצלחה ✓', 'ok');
+  } catch (e) {
+    showMsg($('save-msg'), e.message, 'err');
+  }
+};
+
+$('prev-month').onclick = () => { monthOffset--; loadMonth(); };
+$('next-month').onclick = () => { monthOffset++; loadMonth(); };
+
+/* ---------- אתחול ---------- */
+if (sessionStorage.getItem(TOKEN_KEY)) {
+  $('app-view').style.display = 'block';
+  $('who-name').textContent = 'שלום, ' + (sessionStorage.getItem('emp_name') || '');
+  loadMonth().catch(() => {});
+} else {
+  initLogin();
+}
+</script>
+</body>
+</html>
