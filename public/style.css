@@ -1,0 +1,216 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --primary: #1e6fd9;
+  --primary-dark: #1558b0;
+  --bg: #f0f4f9;
+  --card: #ffffff;
+  --text: #1c2733;
+  --muted: #6b7a8c;
+  --border: #dde5ee;
+  --danger: #d93838;
+  --danger-bg: #fdeaea;
+  --ok: #1d9d5f;
+  --ok-bg: #e6f7ef;
+  --warn-bg: #fff6e0;
+  --warn: #b07d10;
+}
+
+body {
+  font-family: 'Heebo', Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+header.app-header {
+  background: var(--primary);
+  color: #fff;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+header.app-header h1 { font-size: 1.2em; font-weight: 800; }
+header.app-header .who { font-size: 0.9em; opacity: 0.95; display: flex; align-items: center; gap: 10px; }
+header.app-header a.header-link { color: #fff; font-size: 0.9em; text-decoration: underline; text-underline-offset: 3px; }
+
+/* --- בורר דף בפינה העליונה (במסכי הכניסה) --- */
+.page-switch {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 50;
+  display: flex;
+  gap: 4px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 4px;
+  box-shadow: 0 2px 10px rgba(20, 40, 70, 0.13);
+}
+.page-switch a {
+  text-decoration: none;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 0.88em;
+  padding: 7px 16px;
+  border-radius: 20px;
+  transition: background 0.15s, color 0.15s;
+}
+.page-switch a:hover { background: #eef3fa; color: var(--primary-dark); }
+.page-switch a.active { background: var(--primary); color: #fff; }
+
+main { max-width: 980px; margin: 20px auto; padding: 0 14px 60px; }
+
+.card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 22px;
+  box-shadow: 0 1px 4px rgba(20, 40, 70, 0.08);
+  margin-bottom: 18px;
+}
+
+.card h2 { font-size: 1.15em; font-weight: 800; margin-bottom: 14px; }
+.card h3 { font-size: 1em; font-weight: 700; margin: 14px 0 8px; }
+
+label { display: block; font-size: 0.9em; font-weight: 700; margin-bottom: 5px; color: var(--muted); }
+
+input, select, textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 1em;
+  background: #fff;
+  color: var(--text);
+}
+
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary); border-color: transparent; }
+
+.field { margin-bottom: 14px; }
+
+button {
+  font-family: inherit;
+  font-size: 0.95em;
+  font-weight: 700;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  cursor: pointer;
+  background: var(--primary);
+  color: #fff;
+  transition: background 0.15s;
+}
+button:hover { background: var(--primary-dark); }
+button.secondary { background: #e8eef6; color: var(--primary-dark); }
+button.secondary:hover { background: #d8e3f2; }
+button.danger { background: var(--danger); }
+button.danger:hover { background: #b32525; }
+button.small { padding: 6px 12px; font-size: 0.85em; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.spread { justify-content: space-between; }
+
+.msg { padding: 10px 14px; border-radius: 8px; margin: 10px 0; font-size: 0.92em; display: none; }
+.msg.ok { display: block; background: var(--ok-bg); color: var(--ok); }
+.msg.err { display: block; background: var(--danger-bg); color: var(--danger); }
+.msg.warn { display: block; background: var(--warn-bg); color: var(--warn); }
+
+/* --- ניווט שבועות --- */
+.week-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.week-nav .label { font-weight: 800; font-size: 1.05em; min-width: 210px; text-align: center; }
+
+/* --- טבלת משמרות --- */
+table.shifts {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92em;
+}
+table.shifts th, table.shifts td {
+  border: 1px solid var(--border);
+  padding: 8px;
+  text-align: center;
+  vertical-align: middle;
+}
+table.shifts th { background: #f5f8fc; font-weight: 700; }
+table.shifts td.day-name { font-weight: 800; background: #f5f8fc; white-space: nowrap; }
+table.shifts td.day-name.weekend { background: #e9eff8; }
+table.shifts td.day-name .date { display: block; font-weight: 400; font-size: 0.8em; color: var(--muted); }
+
+/* תא אילוץ של עובד */
+td.con-cell { cursor: pointer; user-select: none; padding: 0; }
+table.shifts.locked td.con-cell { cursor: not-allowed; opacity: 0.6; }
+td.con-cell .inner { padding: 14px 8px; font-weight: 700; color: var(--ok); }
+td.con-cell.blocked { background: var(--danger-bg); }
+td.con-cell.blocked .inner { color: var(--danger); }
+
+/* סידור מפורסם */
+td.assign { line-height: 1.7; }
+td.assign .me { background: var(--ok-bg); color: var(--ok); font-weight: 800; border-radius: 6px; padding: 1px 8px; display: inline-block; }
+td.assign .empty { color: var(--muted); }
+
+/* עורך סידור (מנהל) */
+td.editor select { margin: 2px 0; font-size: 0.9em; padding: 6px 8px; }
+td.editor select.conflict { background: var(--danger-bg); border-color: var(--danger); }
+td.editor select.empty-slot { color: var(--muted); }
+
+/* טבלת אילוצים למנהל */
+table.shifts td.b { background: var(--danger-bg); color: var(--danger); font-weight: 800; }
+table.shifts td.ok-mark { color: #c3cfdc; }
+
+/* --- טאבים --- */
+.tabs { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
+.tabs button {
+  background: #e2e9f2;
+  color: var(--muted);
+  border-radius: 8px 8px 0 0;
+  padding: 10px 22px;
+}
+.tabs button.active { background: var(--card); color: var(--primary-dark); }
+.tab-page { display: none; }
+.tab-page.active { display: block; }
+
+/* --- רשימת עובדים --- */
+table.emps { width: 100%; border-collapse: collapse; font-size: 0.95em; }
+table.emps th, table.emps td { border-bottom: 1px solid var(--border); padding: 9px 8px; text-align: right; }
+table.emps th { color: var(--muted); font-size: 0.85em; }
+table.emps td .code { font-family: monospace; background: #f0f4f9; padding: 2px 8px; border-radius: 6px; }
+
+.badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.8em; font-weight: 700; }
+.badge.ok { background: var(--ok-bg); color: var(--ok); }
+.badge.warn { background: var(--warn-bg); color: var(--warn); }
+.badge.muted { background: #edf1f6; color: var(--muted); }
+.badge.danger { background: var(--danger-bg); color: var(--danger); }
+
+.note-line { font-size: 0.88em; color: var(--muted); margin-top: 4px; }
+.note-line b { color: var(--text); }
+
+.login-wrap { max-width: 420px; margin: 60px auto; }
+.login-wrap .logo-circ {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: var(--primary); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.8em; margin: 0 auto 14px;
+}
+.login-wrap h1 { text-align: center; font-size: 1.3em; margin-bottom: 4px; }
+.login-wrap .sub { text-align: center; color: var(--muted); font-size: 0.9em; margin-bottom: 20px; }
+
+.legend { font-size: 0.85em; color: var(--muted); margin-top: 10px; }
+
+@media (max-width: 640px) {
+  table.shifts { font-size: 0.82em; }
+  td.con-cell .inner { padding: 12px 4px; }
+  .card { padding: 14px; }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "shift-scheduler",
+  "version": "1.0.0",
+  "description": "מערכת סידור עבודה — הזנת אילוצים ושיבוץ אוטומטי",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
